@@ -1,4 +1,18 @@
+import React from 'react';
+import { useState } from 'react';
+import Axios from 'axios';
 import styled from 'styled-components';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import Dialog from '@material-ui/core/Dialog';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogActions from '@material-ui/core/DialogActions';
+
+import { Header, AppNameComponent, AppIcon, SearchComponent, SearchIcon, SearchInput } from './components/Header';
+import { RecipeContainer, RecipeListContainer, RecipeName, SeeMoreText, CoverImage, IngredientsText } from './components/recipeComponent';
+
+
+const APP_ID = "9c96de9a";
+const APP_KEY = "5986326a775ec7c14f26c05b8a4fe9ef";
 
 const Container = styled.div`
   display: flex;
@@ -6,63 +20,83 @@ const Container = styled.div`
   border: none;
 `;
 
-const Header = styled.div`
-  color: white;
-  background-color: black;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-  font-size: 20px;
-  font-weight: bold;
-  box-shadow: 0 3px 6px 0 #555;
-`;
-
-const AppNameComponent = styled.div`
-  display: flex;
-  align-items: center;
+const Placeholder = styled.img`
+  width: 120px;
+  height: 120px;
+  margin: 200px;
+  opacity: 50%;
 `
 
-const AppIcon = styled.img`
-  width: 36px;
-  height: 36px;
-  margin: 12px;
-`
+const RecipeComponent = (props) => {
 
-const SearchIcon = styled.img`
-  width: 25px;
-  height: 25px;
-`
+  const [show, setShow] = React.useState(false);
+  const { recipeObj } = props;
+  return (
+    <>
+      <Dialog open={show}>
+        <DialogTitle id='alert-dialog-slide-title'>Ingredients</DialogTitle>
+        <DialogContent>
+          <table>
+            <thead>
+              <th>Ingredients</th>
+              <th>Weight</th>
+            </thead>
+            <tbody>
+              {recipeObj.ingredients.map((ingredientsObj) =>
+                <tr>
+                  <td>{ingredientsObj.text}</td>
+                  <td>{ingredientsObj.weight}</td>
+                </tr>
+              )}
 
-const SearchComponent = styled.div`
-  display: flex;
-  flex-direction: row;
-  background-color: white;
-  padding: 10px;
-  border-radius: 6px;
-  width: 50%;
-`;
+            </tbody>
+          </table>
+          <DialogActions>
+            <IngredientsText onClick={() => window.open(recipeObj.url)}>See More</IngredientsText>
+            <SeeMoreText onClick={() => setShow("")}>Close</SeeMoreText>
+          </DialogActions>
+        </DialogContent>
 
-const SearchInput = styled.input`
-  border: none;
-  outline: none;
-  margin-left: 15px;
-  font-size: 16px;
-  font-weight: bold;
-`
+      </Dialog>
+      <RecipeContainer>
+        <CoverImage src={recipeObj.image} />
+        <RecipeName>{recipeObj.label}</RecipeName>
+        <IngredientsText onClick={() => setShow(true)}>Ingredients</IngredientsText>
+        <SeeMoreText onClick={() => window.open(recipeObj.url)}>See Complete Recipe</SeeMoreText>
+      </RecipeContainer>
+    </>
+  );
+};
 
 function App() {
+
+  const [timeoutId, updateTimeOutId] = useState();
+  const [recipeList, updateRecipeList] = useState([]);
+  const fetchRecipe = async (searchString) => {
+    const response = await Axios.get(`https://api.edamam.com/search?q=${searchString}&app_id=${APP_ID}&app_key=${APP_KEY}`);
+    updateRecipeList(response.data.hits);
+  };
+
+  const onTextChange = (event) => {
+    clearTimeout(timeoutId)
+    const timeOut = setTimeout(() => fetchRecipe(event.target.value), 500);
+    updateTimeOutId(timeOut);
+  }
+
   return (
     <Container>
       <Header>
         <AppNameComponent><AppIcon src='food-icon.png' />Find Recipe</AppNameComponent>
         <SearchComponent>
           <SearchIcon src="/search.png" />
-          <SearchInput placeholder='Search Recipe'/>
+          <SearchInput placeholder='Search Recipe' onChange={onTextChange} />
         </SearchComponent>
       </Header>
-      Sandeep Balli
+      <RecipeListContainer>
+        {recipeList.length ? recipeList.map((recipeObj) => (
+          <RecipeComponent recipeObj={recipeObj.recipe} />
+        )) : <Placeholder src="icon.png" /> }
+      </RecipeListContainer>
     </Container>
   );
 }
